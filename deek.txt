@@ -1,0 +1,610 @@
+program 1
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <fcntl.h>
+#include <dirent.h>
+#include <unistd.h>
+
+int main() {
+    // Directory operations: open and read
+    DIR *dir = opendir(".");
+    if (dir == NULL) {
+        perror("Directory open failed");
+        exit(1);
+    }
+
+    struct dirent *entry;
+    printf("Listing directory contents:\n");
+    while ((entry = readdir(dir)) != NULL) {
+        printf("%s\n", entry->d_name);
+    }
+
+    closedir(dir);
+    printf("Directory closed.\n");
+
+    // File operations: open and close
+    int fd = open("test.txt", O_CREAT | O_WRONLY, 0644);
+    if (fd < 0) {
+        perror("File open failed");
+        exit(1);
+    }
+    printf("File 'test.txt' created successfully.\n");
+
+    close(fd);
+    printf("File closed.\n");
+
+    printf("Exiting program...\n");
+    exit(0);
+}
+
+
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+
+int main() {
+    pid_t pid;
+
+    printf("Parent Process ID: %d\n", getpid());
+
+    // Creating a child process using fork()
+    pid = fork();
+
+    if (pid < 0) {
+        perror("Fork failed");
+        exit(1);
+    } 
+    else if (pid == 0) {  // Child process
+        printf("Child Process ID: %d\n", getpid());
+
+        // Executing a new program using exec()
+        printf("Executing 'ls -l' using exec...\n");
+        execl("/bin/ls", "ls", "-l", NULL);
+        
+        perror("Exec failed"); // This runs only if exec fails
+        exit(1);
+    } 
+    else {  // Parent process
+        wait(NULL); // Waiting for child to finish
+        printf("Child process completed.\n");
+    }
+
+    return 0;
+}
+
+
+
+
+pthreads
+
+
+#include <stdio.h>
+#include<stdlib.h>
+#include<unistd.h>
+#include<pthread.h>
+
+int i;
+void* print(void* i){
+    int* j=(int*)i;
+    printf("Thread %d\n",*j);
+}
+int main() {
+    // Write C code here
+pthread_t tid[3];
+for(i=0;i<3;i++){
+    pthread_create(&tid[3],NULL,print,(void*)&i);
+    sleep(1);
+}
+for(i=0;i<3;i++){
+    pthread_join(tid[i],NULL);
+}
+}
+
+
+roundrobin
+
+
+import java.util.Scanner;
+
+public class RoundRobin {
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+
+        // Get number of processes
+        System.out.print("Enter number of processes: ");
+        int n = sc.nextInt();
+
+        // Get time quantum
+        System.out.print("Enter time quantum: ");
+        int quantum = sc.nextInt();
+
+        int[] at = new int[n], bt = new int[n], rt = new int[n]; // Arrival, Burst, Remaining Time
+        int[] ct = new int[n], tat = new int[n], wt = new int[n]; // Completion, Turnaround, Waiting Time
+
+        // Input Arrival Time and Burst Time
+        for (int i = 0; i < n; i++) {
+            System.out.print("Enter Arrival Time and Burst Time for Process " + (i + 1) + ": ");
+            at[i] = sc.nextInt();
+            bt[i] = sc.nextInt();
+            rt[i] = bt[i]; // Remaining Time initialized as Burst Time
+        }
+
+        int currentTime = 0, completed = 0;
+        boolean done;
+        
+        // Round Robin execution loop
+        while (completed < n) {
+            done = true;
+
+            for (int i = 0; i < n; i++) {
+                if (rt[i] > 0 && at[i] <= currentTime) { // If process is not finished and has arrived
+                    done = false;
+                    
+                    if (rt[i] > quantum) {
+                        currentTime += quantum;
+                        rt[i] -= quantum;
+                    } else {
+                        currentTime += rt[i];
+                        ct[i] = currentTime; // Completion Time
+                        tat[i] = ct[i] - at[i]; // Turnaround Time
+                        wt[i] = tat[i] - bt[i]; // Waiting Time
+                        rt[i] = 0; // Process completed
+                        completed++;
+                    }
+                }
+            }
+
+            if (done) currentTime++; // If no process is ready, increase time
+        }
+
+        // Display results
+        System.out.println("\nAT\tBT\tCT\tTAT\tWT");
+        double totalTAT = 0, totalWT = 0;
+        for (int i = 0; i < n; i++) {
+            System.out.println(at[i] + "\t" + bt[i] + "\t" + ct[i] + "\t" + tat[i] + "\t" + wt[i]);
+            totalTAT += tat[i];
+            totalWT += wt[i];
+        }
+
+        // Display average times
+        System.out.println("\nAverage Turnaround Time: " + (totalTAT / n));
+        System.out.println("Average Waiting Time: " + (totalWT / n));
+
+        sc.close();
+    }
+}  
+
+prior
+
+import java.util.Scanner;
+
+public class PriorityScheduling {
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+
+        // Get the number of processes
+        System.out.print("Enter number of processes: ");
+        int n = sc.nextInt();
+
+        int[] at = new int[n];
+        int[] bt = new int[n];
+        int[] pr = new int[n];
+        int[] ct = new int[n];
+        int[] tat = new int[n];
+        int[] wt = new int[n];
+        boolean[] completed = new boolean[n];
+
+        // Input Arrival Time, Burst Time, and Priority
+        for (int i = 0; i < n; i++) {
+            System.out.print("Enter Arrival Time, Burst Time, and Priority for Process " + (i + 1) + ": ");
+            at[i] = sc.nextInt();
+            bt[i] = sc.nextInt();
+            pr[i] = sc.nextInt();
+        }
+
+        int currentTime = 0, completedCount = 0;
+        
+        while (completedCount < n) {
+            int minPriority = Integer.MAX_VALUE, idx = -1;
+
+            // Find the highest priority process that has arrived
+            for (int i = 0; i < n; i++) {
+                if (!completed[i] && at[i] <= currentTime && pr[i] < minPriority) {
+                    minPriority = pr[i];
+                    idx = i;
+                }
+            }
+
+            if (idx != -1) {
+                currentTime = Math.max(currentTime, at[idx]) + bt[idx]; // Move currentTime forward
+                ct[idx] = currentTime;
+                tat[idx] = ct[idx] - at[idx];
+                wt[idx] = tat[idx] - bt[idx];
+                completed[idx] = true;
+                completedCount++;
+            } else {
+                currentTime++; // CPU is idle
+            }
+        }
+
+        // Display results
+        System.out.println("\nAT\tBT\tPriority\tCT\tTAT\tWT");
+        double totalTAT = 0, totalWT = 0;
+        for (int i = 0; i < n; i++) {
+            System.out.println(at[i] + "\t" + bt[i] + "\t" + pr[i] + "\t\t" + ct[i] + "\t" + tat[i] + "\t" + wt[i]);
+            totalTAT += tat[i];
+            totalWT += wt[i];
+        }
+
+        System.out.println("\nAverage Turnaround Time: " + (totalTAT / n));
+        System.out.println("Average Waiting Time: " + (totalWT / n));
+
+        sc.close();
+    }
+}
+
+
+
+sjf
+
+import java.util.*;
+class process{
+    int pid;
+    int pri;
+    int bt;
+    int wt;
+    int tat;
+}
+public class Main
+{
+	public static void main(String[] args) {
+	    Scanner sc=new Scanner(System.in);
+	    System.out.print("Enter no.of processes: ");
+	    int n=sc.nextInt();
+	    process[] p=new process[n];
+	    for(int i=0;i<n;i++){
+	        p[i]=new process();
+	       System.out.print("Enter pid,priority and brusttime: ");
+	       p[i].pid=sc.nextInt();
+	       p[i].pri=sc.nextInt();
+	       p[i].bt=sc.nextInt();
+	      // System.out.println();
+	    }
+	     for(int i=0;i<n-1;i++){
+	        for(int j=i+1;j<n;j++){
+	            if(p[i].pri>p[j].pri){
+	                process temp=p[i];
+	                p[i]=p[j];
+	                p[j]=temp;
+	            }
+	        }
+	     }
+	     p[0].wt=0;
+	     p[0].tat=p[0].wt+p[0].bt;
+	  int twt=p[0].wt;
+	    int ttat=p[0].tat;
+	    for(int i=1;i<n;i++){
+	       // p[i].ct=p[i-1].ct+p[i].bt;
+	        //p[i].tat=p[i].ct-p[i].at;
+	        p[i].wt=p[i-1].wt+p[i-1].bt;
+	        p[i].tat=p[i].wt+p[i].bt;
+	        twt+=p[i].wt;
+	        ttat+=p[i].tat;
+	    }
+	    double avgw=(double)twt/n;
+	    double avgt=(double)ttat/n;
+	    System.out.println("process\tprioritylTime\tBrustTime\twaitingTime\ttat\t");
+	    for(int i=0;i<n;i++){
+	        System.out.println(p[i].pid+"\t\t"+p[i].pri+"\t\t"+p[i].bt+"\t\t"+p[i].wt+"\t\t"+p[i].tat);
+	        
+	    }
+	    System.out.println("avgwaitingTimme: "+avgw);
+	    System.out.println("avgtat: "+avgt);
+	}
+}
+
+
+fcfs
+
+import java.util.Arrays;
+import java.util.Scanner;
+
+class Process {
+    String name;
+    int arrivalTime;
+    int burstTime;
+    
+    public Process(String name, int arrivalTime, int burstTime) {
+        this.name = name;
+        this.arrivalTime = arrivalTime;
+        this.burstTime = burstTime;
+    }
+}
+
+public class FCFSScheduler {
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+        System.out.print("Enter number of processes: ");
+        int n = scanner.nextInt();
+        
+        Process[] processes = new Process[n];
+        
+        for (int i = 0; i < n; i++) {
+            System.out.print("Enter name, arrival time, and burst time for process " + (i + 1) + ": ");
+            String name = scanner.next();
+            int arrivalTime = scanner.nextInt();
+            int burstTime = scanner.nextInt();
+            processes[i] = new Process(name, arrivalTime, burstTime);
+        }
+        
+        scanner.close();
+        fcfsScheduling(processes);
+    }
+    
+    public static void fcfsScheduling(Process[] processes) {
+        int currentTime = 0;
+        int totalProcesses = processes.length;
+        int[] completionTimes = new int[totalProcesses];
+        int[] waitingTimes = new int[totalProcesses];
+        int[] turnaroundTimes = new int[totalProcesses];
+        
+        // Sort the processes array based on arrival time
+        Arrays.sort(processes, (p1, p2) -> p1.arrivalTime - p2.arrivalTime);
+        
+        for (int i = 0; i < totalProcesses; i++) {
+            Process currentProcess = processes[i];
+            
+            // Calculate waiting time
+            waitingTimes[i] = Math.max(0, currentTime - currentProcess.arrivalTime);
+            
+            // Calculate completion time
+            completionTimes[i] = currentTime + currentProcess.burstTime;
+            
+            // Calculate turnaround time
+            turnaroundTimes[i] = completionTimes[i] - currentProcess.arrivalTime;
+            
+            // Move the current time forward
+            currentTime = completionTimes[i];
+        }
+        
+        // Print process details
+        System.out.println("Process\tArrival Time\tBurst Time\tCompletion Time\tWaiting Time\tTurnaround Time");
+        for (int i = 0; i < totalProcesses; i++) {
+            Process currentProcess = processes[i];
+            System.out.println(currentProcess.name + "\t\t" +
+                    currentProcess.arrivalTime + "\t\t" +
+                    currentProcess.burstTime + "\t\t" +
+                    completionTimes[i] + "\t\t" +
+                    waitingTimes[i] + "\t\t" +
+                    turnaroundTimes[i]);
+        }
+    }
+}
+
+
+prodcon
+
+import java.util.concurrent.*;
+import java.util.*;
+
+class ProducerConsumer {
+    // Shared buffer and semaphores
+    static final int BUFFER_SIZE = 5;
+    static Queue<Integer> buffer = new LinkedList<>();
+    
+    static Semaphore empty = new Semaphore(BUFFER_SIZE);  // Tracks empty spaces
+    static Semaphore full = new Semaphore(0);             // Tracks full spaces
+    static Semaphore mutex = new Semaphore(1);            // For mutual exclusion on buffer
+
+    // Producer thread
+    static class Producer extends Thread {
+        public void run() {
+            try {
+                while (true) {
+                    int item = (int) (Math.random() * 100); // Random item to produce
+                    
+                    empty.acquire();  // Wait if buffer is full
+                    mutex.acquire();  // Lock buffer
+
+                    buffer.add(item);  // Add item to buffer
+                    System.out.println("Produced: " + item);
+
+                    mutex.release();  // Unlock buffer
+                    full.release();   // Signal consumer that item is available
+                    
+                    Thread.sleep(1000); // Simulate production time
+                }
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    // Consumer thread
+    static class Consumer extends Thread {
+        public void run() {
+            try {
+                while (true) {
+                    full.acquire();   // Wait if buffer is empty
+                    mutex.acquire();  // Lock buffer
+
+                    int item = buffer.poll();  // Consume item
+                    System.out.println("Consumed: " + item);
+
+                    mutex.release();  // Unlock buffer
+                    empty.release();  // Signal producer that space is available
+                    
+                    Thread.sleep(1500); // Simulate consumption time
+                }
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    // Main method to start producer and consumer
+    public static void main(String[] args) {
+        Producer producer = new Producer();
+        Consumer consumer = new Consumer();
+
+        producer.start();
+        consumer.start();
+    }
+}
+
+
+ff
+
+import java.util.Scanner;
+
+public class FirstFitOS {
+    public static void firstFit(int[] blockSize, int[] processSize) {
+        int n = processSize.length, m = blockSize.length;
+        int[] allocation = new int[n];
+        
+        for (int i = 0; i < n; i++) allocation[i] = -1;
+
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < m; j++) {
+                if (blockSize[j] >= processSize[i]) {
+                    allocation[i] = j;
+                    blockSize[j] -= processSize[i];
+                    break;
+                }
+            }
+        }
+
+        System.out.println("Process\tSize\tBlock");
+        for (int i = 0; i < n; i++) {
+            System.out.println((i + 1) + "\t" + processSize[i] + "\t" + (allocation[i] == -1 ? "Not Allocated" : (allocation[i] + 1)));
+        }
+    }
+
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+
+        System.out.print("Enter number of blocks: ");
+        int m = sc.nextInt();
+        int[] blockSize = new int[m];
+        System.out.println("Enter block sizes: ");
+        for (int i = 0; i < m; i++) blockSize[i] = sc.nextInt();
+
+        System.out.print("Enter number of processes: ");
+        int n = sc.nextInt();
+        int[] processSize = new int[n];
+        System.out.println("Enter process sizes: ");
+        for (int i = 0; i < n; i++) processSize[i] = sc.nextInt();
+        
+        firstFit(blockSize, processSize);
+        sc.close();
+    }
+}
+
+bf
+
+import java.util.Scanner;
+
+public class BestFitOS {
+    public static void bestFit(int[] blockSize, int[] processSize) {
+        int n = processSize.length, m = blockSize.length;
+        int[] allocation = new int[n];
+        
+        for (int i = 0; i < n; i++) allocation[i] = -1;
+
+        for (int i = 0; i < n; i++) {
+            int bestIdx = -1;
+            for (int j = 0; j < m; j++) {
+                if (blockSize[j] >= processSize[i]) {
+                    if (bestIdx == -1 || blockSize[j] < blockSize[bestIdx]) {
+                        bestIdx = j;
+                    }
+                }
+            }
+            if (bestIdx != -1) {
+                allocation[i] = bestIdx;
+                blockSize[bestIdx] -= processSize[i];
+            }
+        }
+
+        System.out.println("Process\tSize\tBlock");
+        for (int i = 0; i < n; i++) {
+            System.out.println((i + 1) + "\t" + processSize[i] + "\t" + (allocation[i] == -1 ? "Not Allocated" : (allocation[i] + 1)));
+        }
+    }
+
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+
+        System.out.print("Enter number of blocks: ");
+        int m = sc.nextInt();
+        int[] blockSize = new int[m];
+        System.out.println("Enter block sizes: ");
+        for (int i = 0; i < m; i++) blockSize[i] = sc.nextInt();
+
+        System.out.print("Enter number of processes: ");
+        int n = sc.nextInt();
+        int[] processSize = new int[n];
+        System.out.println("Enter process sizes: ");
+        for (int i = 0; i < n; i++) processSize[i] = sc.nextInt();
+        
+        bestFit(blockSize, processSize);
+        sc.close();
+    }
+}
+
+wf
+
+import java.util.Scanner;
+
+public class WorstFitOS {
+    public static void worstFit(int[] blockSize, int[] processSize) {
+        int n = processSize.length, m = blockSize.length;
+        int[] allocation = new int[n];
+        
+        for (int i = 0; i < n; i++) allocation[i] = -1;
+
+        for (int i = 0; i < n; i++) {
+            int worstIdx = -1;
+            for (int j = 0; j < m; j++) {
+                if (blockSize[j] >= processSize[i]) {
+                    if (worstIdx == -1 || blockSize[j] > blockSize[worstIdx]) {
+                        worstIdx = j;
+                    }
+                }
+            }
+            if (worstIdx != -1) {
+                allocation[i] = worstIdx;
+                blockSize[worstIdx] -= processSize[i];
+            }
+        }
+
+        System.out.println("Process\tSize\tBlock");
+        for (int i = 0; i < n; i++) {
+            System.out.println((i + 1) + "\t" + processSize[i] + "\t" + (allocation[i] == -1 ? "Not Allocated" : (allocation[i] + 1)));
+        }
+    }
+
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+
+        System.out.print("Enter number of blocks: ");
+        int m = sc.nextInt();
+        int[] blockSize = new int[m];
+        System.out.println("Enter block sizes: ");
+        for (int i = 0; i < m; i++) blockSize[i] = sc.nextInt();
+
+        System.out.print("Enter number of processes: ");
+        int n = sc.nextInt();
+        int[] processSize = new int[n];
+        System.out.println("Enter process sizes: ");
+        for (int i = 0; i < n; i++) processSize[i] = sc.nextInt();
+        
+        worstFit(blockSize, processSize);
+        sc.close();
+    }
+}
